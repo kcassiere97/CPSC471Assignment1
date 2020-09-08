@@ -4,53 +4,43 @@
 
 from socket import *
 
-def main():
-    #Socket module import
-    serverSocket = socket(AF_INET, SOCKET_STREAM)
-    #Prepare server socket
+# Server's host address and port
+HOST = 'localhost'
+PORT = 2020
 
+# Receive buffer
+RECVBUFF = 1024
 
-# fill in start
-   #---------------------------------------------------
-    #local host
-    serverHost = 'localhost'
+if __name__ == '__main__':
+    # Create socket object
+    serverSocket = socket(AF_INET, SOCK_STREAM)
     
-    #recieve buffer
-    recvBuffer = 1024
+    # Binds the serverSocket to the port and address
+    serverSocket.bind((HOST, PORT))
 
-    #declare a server port
-    serverPort = 2020
-    
-    # binds the serverSocket to the port and address
-    serverSocket.bind(('', serverPort))
-
-    #the server socket will listen to one connection
+    # The server socket will listen to one connection
     serverSocket.listen(1)
-   #---------------------------------------------------
-#Fill in end
 
-while True:
-    #Establish the connection
-    print ('Ready to serve...')
-    
-    #Fill in start 
+    # Accept a connection
     connectionSocket, addr = serverSocket.accept()
-    #we have to accept the connection 
 
-    try:
-        message = connectionSocket.recv(1024)
-        print (message)
-        filename = message.split()[1]
-        f = open(filename[1:])
-        outputdata = f.read()
-        print (outputdata)
-        
-        
-        
-        #Fill in start #Fill in end
-        #Send one HTTP header line into socket
-        #Fill in start
-        #Fill in end
+    with connectionSocket as conn:
+        # Establish the connection
+        print('Connected to ', addr)
 
+        try:
+            # Receive HTTP request data
+            message = conn.recv(RECVBUFF)
+            print(message)
 
-        
+            # Echo back message
+            conn.sendall(message)
+
+            # filename = message.split()[1]
+            # f = open(filename[1:])
+            # outputdata = f.read()
+            # print (outputdata)
+
+        except ConnectionError:
+            conn.close()
+
