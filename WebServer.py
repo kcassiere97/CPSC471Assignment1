@@ -20,21 +20,26 @@ def main():
 
         try:
             message = connectionSocket.recv(1024)
-            print (message, '::',message.split()[0],':',message.split()[1])
-            filename = message.split()[1]
-            print(filename,'||',filename[1:])
-            f = open(filename[1:])
+            # print (message, '::',message.split()[0],':',message.split()[1])
+            filename = message.decode('utf-8')
+            print(message.decode('utf-8'))
+            # filename = message.split()[1]
+            # print(filename,'||',filename[1:])
+            f = open('./FileSystem/'+filename)
             outputdata = f.read()
-            print(outputdata)
+            # print(outputdata)
 
             #send HTTP request into socket
-            connectionSocket.send('\nHTTP/1.1 200 OK\n\n')
-            connectionSocket.send(outputdata)
+            connectionSocket.send(b'\nHTTP/1.1 200 OK\n\n')
+            connectionSocket.send(outputdata.encode('utf-8'))
             connectionSocket.close()
 
         except IOError:
             #IF connection fails throw error
-            connectionSocket.send('\nHTTP/1.1 404 Not Found\n\n')
+            connectionSocket.send(b'\nHTTP/1.1 404 Not Found\n\n')
+        except KeyboardInterrupt:  # Doesn't stop the program
+            connectionSocket.close()
+            break
     serverSocket.close()
 
 if __name__ == "__main__":
