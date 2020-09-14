@@ -2,6 +2,7 @@
 #Michael Housworth 88684313
 from socket import *
 
+
 def main():
 
     #declare server port
@@ -11,14 +12,25 @@ def main():
     #Prepare a server socket
     serverSocket.bind(('',serverPort))
     serverSocket.listen(1)
+    serverSocket.settimeout(3)
     print('the is running at:',serverPort)
 
     while True:
         #Establish the connection
         print('Ready to serve')
-        connectionSocket, addr = serverSocket.accept()
+        connectionSocket = socket()
+        addr = None
+        try:
+            try:
+                connectionSocket, addr = serverSocket.accept()
+            except timeout:
+                continue
+        except KeyboardInterrupt:  # Doesn't stop the program
+            connectionSocket.close()
+            break
 
         try:
+            serverSocket.settimeout(None)
             message = connectionSocket.recv(1024)
             # print (message, '::',message.split()[0],':',message.split()[1])
             filename = message.decode('utf-8')
@@ -33,6 +45,7 @@ def main():
             connectionSocket.send(b'\nHTTP/1.1 200 OK\n\n')
             connectionSocket.send(outputdata.encode('utf-8'))
             connectionSocket.close()
+            serverSocket.settimeout(3)
 
         except IOError:
             #IF connection fails throw error
@@ -41,6 +54,7 @@ def main():
             connectionSocket.close()
             break
     serverSocket.close()
+
 
 if __name__ == "__main__":
     main()
