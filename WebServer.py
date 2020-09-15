@@ -5,14 +5,15 @@ import datetime
 
 
 # Returns an html response header
-def html_header(ct: str = None):
+def html_header(ct: str = None, cl: int = None):
     tz = datetime.timezone(datetime.timedelta(hours=-7))
     dt = datetime.datetime.now(tz)
     dateStr = "Date:" + dt.strftime("%a, %d. %B %Y %H:%M") + "\r\n"
     serverStr = "Server: PythonSocket/0.1\r\n"
     contentTypeStr = ('Content-Type: ' + ct + '\r\n') if ct else ''
+    contentLengthStr = ('Content-Type: ' + str(cl) + '\r\n') if ct else ''
 
-    return dateStr + serverStr + contentTypeStr + '\r\n'
+    return dateStr + serverStr + contentTypeStr + contentLengthStr + '\r\n'
 
 
 # Parses Request message, and sends appropriate Response message
@@ -29,17 +30,27 @@ def parse_request(connSock: socket, msg: str):
         obj, sep, part = part.partition(' ')
 
         # Attempt to read in the file contents
-        fileData = ''
+        fileData = bytes()
+        contentType = ''
+        contentLength = None
         try:
-            f = open('./FileSystem/' + obj)
-            fileData = f.read()
+            filetype = obj.rpartition('.')[2]
+            if filetype == 'txt':
+                f = open('./FileSystem/' + obj)
+                fileData = f.read().encode('utf-8')
+                contentType = 'text/plain'
+            elif filetype == 'png':
+                f = open('./FileSystem/' + obj, 'rb')
+                fileData = f.read()
+                contentType = 'image/png'
+                contentLength = fileData.__len__()
         except IOError:
             connSock.send(b'\nHTTP/1.1 404 Not Found\n\n')
 
         # Build a response message
-        response = 'HTTP/1.1 200 OK\r\n' + html_header(ct='text/plain;') + fileData
+        response = 'HTTP/1.1 200 OK\r\n' + html_header(ct=contentType, cl=contentLength)
         # Encode and send response message
-        connSock.send(response.encode('utf-8'))
+        connSock.send(response.encode('utf-8')+fileData)
         print('Response Sent')
 
 
