@@ -1,56 +1,103 @@
 #Kizar Cassiere 889991428
 #Michael Housworth 88684313
 from socket import *
+import datetime
+
+
+# Returns an html response header
+def html_header(ct: str = None):
+    tz = datetime.timezone(datetime.timedelta(hours=-7))
+    dt = datetime.datetime.now(tz)
+    dateStr = "Date:" + dt.strftime("%a, %d. %B %Y %H:%M") + "\r\n"
+    serverStr = "Server: PythonSocket/0.1\r\n"
+    contentTypeStr = ('Content-Type: ' + ct + '\r\n') if ct else ''
+
+    return dateStr + serverStr + contentTypeStr + '\r\n'
+
+
+# Parses Request message, and sends appropriate Response message
+def parse_request(connSock: socket, msg: str):
+    # Partition the request line from the message
+    request, sep, header = msg.partition('\n')
+    # print(request)
+
+    # Partition the command from the request
+    cmd, sep, part = request.partition(' ')
+
+    if cmd == 'GET':
+        # Partition the object/filepath
+        obj, sep, part = part.partition(' ')
+
+        # Attempt to read in the file contents
+        fileData = ''
+        try:
+            f = open('./FileSystem/' + obj)
+            fileData = f.read()
+        except IOError:
+            connSock.send(b'\nHTTP/1.1 404 Not Found\n\n')
+
+        # Build a response message
+        response = 'HTTP/1.1 200 OK\r\n' + html_header(ct='text/plain;') + fileData
+        # Encode and send response message
+        connSock.send(response.encode('utf-8'))
+        print('Response Sent')
 
 
 def main():
 
-    #declare server port
-    serverPort=2020
-    serverSocket = socket(AF_INET,SOCK_STREAM)
+    # Declare server port
+    serverPort = 2020
+    serverSocket = socket(AF_INET, SOCK_STREAM)
 
-    #Prepare a server socket
-    serverSocket.bind(('',serverPort))
+    # Prepare a server socket
+    serverSocket.bind(('', serverPort))
     serverSocket.listen(1)
-    serverSocket.settimeout(3)
-    print('the is running at:',serverPort)
+    serverSocket.settimeout(3)  # Allows keyboard interrupts to occur
+    print('Server running on port: ', serverPort)
+    print('Ready to accept')
 
     while True:
-        #Establish the connection
-        print('Ready to serve')
+        # Attempt to establish connection
+        print('waiting...')
         connectionSocket = socket()
         addr = None
+
         try:
             try:
                 connectionSocket, addr = serverSocket.accept()
             except timeout:
                 continue
-        except KeyboardInterrupt:  # Doesn't stop the program
+        except KeyboardInterrupt:
+            print('Keyboard Interrupt')
             connectionSocket.close()
+            print('Server Socket Closed')
             break
 
         try:
+            # Disable server socket timeout
             serverSocket.settimeout(None)
-            message = connectionSocket.recv(1024)
-            # print (message, '::',message.split()[0],':',message.split()[1])
-            filename = message.decode('utf-8')
-            print(message.decode('utf-8'))
-            # filename = message.split()[1]
-            # print(filename,'||',filename[1:])
-            f = open('./FileSystem/'+filename)
-            outputdata = f.read()
-            # print(outputdata)
+            print('Accepted Connection')
 
-            #send HTTP request into socket
-            connectionSocket.send(b'\nHTTP/1.1 200 OK\n\n')
-            connectionSocket.send(outputdata.encode('utf-8'))
+            # Receive and decode message
+            message = connectionSocket.recv(1024)
+            decoded = message.decode('utf-8')
+            print('Message Received')
+
+            # Pass connection socket and message to parser
+            parse_request(connectionSocket, decoded)
+
+            # End connection
             connectionSocket.close()
+            print('Closed Connection')
+
+            # Enable server socket timeout
+            print('Ready to accept')
             serverSocket.settimeout(3)
 
         except IOError:
-            #IF connection fails throw error
-            connectionSocket.send(b'\nHTTP/1.1 404 Not Found\n\n')
-        except KeyboardInterrupt:  # Doesn't stop the program
+            # If connection fails throw error
+            connectionSocket.send(b'HTTP/1.1 404 Not Found\r\n')
+        except KeyboardInterrupt:
             connectionSocket.close()
             break
     serverSocket.close()
