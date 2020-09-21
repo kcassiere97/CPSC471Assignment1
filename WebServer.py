@@ -31,6 +31,7 @@ def parse_request(connSock: socket, msg: str):
 
         # Attempt to read in the file contents
         fileData = bytes()
+        status = 'HTTP/1.1 200 OK\r\n'
         contentType = ''
         contentLength = None
         try:
@@ -45,10 +46,12 @@ def parse_request(connSock: socket, msg: str):
                 contentType = 'image/png'
                 contentLength = fileData.__len__()
         except IOError:
-            connSock.send(b'\nHTTP/1.1 404 Not Found\n\n')
+            status = 'HTTP/1.1 404 Not Found\r\n'
+            contentType = 'text/plain'
+            fileData = '404 File Not Found'.encode('utf-8')
 
         # Build a response message
-        response = 'HTTP/1.1 200 OK\r\n' + html_header(ct=contentType, cl=contentLength)
+        response = status + html_header(ct=contentType, cl=contentLength)
         # Encode and send response message
         connSock.send(response.encode('utf-8')+fileData)
         print('Response Sent')
